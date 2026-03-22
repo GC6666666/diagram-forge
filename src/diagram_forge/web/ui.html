@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diagram Forge</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #0F0F0F;
+    color: #E0E0E0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px;
+  }
+  h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #7C5CFF, #00D4AA);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .subtitle { color: #666; margin-bottom: 32px; font-size: 14px; }
+
+  .card {
+    background: #1A1A1A;
+    border: 1px solid #2A2A2A;
+    border-radius: 16px;
+    padding: 32px;
+    width: 100%;
+    max-width: 640px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    background: #111;
+    padding: 4px;
+    border-radius: 10px;
+  }
+  .tab {
+    flex: 1;
+    padding: 10px 16px;
+    background: transparent;
+    border: none;
+    color: #666;
+    font-size: 14px;
+    cursor: pointer;
+    border-radius: 8px;
+    transition: all 0.2s;
+  }
+  .tab.active { background: #1A1A1A; color: #E0E0E0; }
+
+  .section { margin-bottom: 24px; }
+  .section-label {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  textarea, input[type="text"] {
+    width: 100%;
+    background: #111;
+    border: 1px solid #2A2A2A;
+    border-radius: 10px;
+    padding: 14px;
+    color: #E0E0E0;
+    font-size: 14px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 120px;
+    transition: border-color 0.2s;
+  }
+  textarea:focus, input:focus {
+    outline: none;
+    border-color: #7C5CFF;
+  }
+  textarea::placeholder, input::placeholder { color: #444; }
+
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pill {
+    padding: 8px 16px;
+    background: #111;
+    border: 1px solid #2A2A2A;
+    border-radius: 20px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: #888;
+  }
+  .pill.selected { border-color: #7C5CFF; color: #E0E0E0; background: #1E1E30; }
+
+  .char-count { text-align: right; font-size: 11px; color: #444; margin-top: 4px; }
+  .char-count.warning { color: #FF6B6B; }
+
+  button.generate {
+    width: 100%;
+    padding: 16px;
+    background: linear-gradient(135deg, #7C5CFF, #6B4FD6);
+    border: none;
+    border-radius: 12px;
+    color: white;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+    margin-bottom: 24px;
+  }
+  button.generate:hover { opacity: 0.85; }
+  button.generate:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .output { display: none; }
+  .output.visible { display: block; }
+
+  .status { margin-bottom: 16px; }
+  .status-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    background: #111;
+    color: #888;
+  }
+  .status-badge.pending { color: #FFA500; border: 1px solid #FFA50033; }
+  .status-badge.processing { color: #7C5CFF; border: 1px solid #7C5CFF33; animation: pulse 1.5s infinite; }
+  .status-badge.completed { color: #00D4AA; border: 1px solid #00D4AA33; }
+  .status-badge.failed { color: #FF6B6B; border: 1px solid #FF6B6B33; }
+
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+  .downloads { display: flex; gap: 12px; }
+  .download-btn {
+    flex: 1;
+    padding: 12px;
+    background: #111;
+    border: 1px solid #2A2A2A;
+    border-radius: 10px;
+    color: #E0E0E0;
+    font-size: 13px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.2s;
+  }
+  .download-btn:hover { border-color: #7C5CFF; background: #1E1E30; }
+  .download-btn .format { font-weight: 600; color: #00D4AA; font-size: 15px; }
+  .download-btn .desc { color: #666; font-size: 11px; margin-top: 2px; }
+
+  .error-msg {
+    padding: 12px;
+    background: #1E0008;
+    border: 1px solid #FF6B6B33;
+    border-radius: 10px;
+    color: #FF6B6B;
+    font-size: 13px;
+    margin-top: 12px;
+  }
+
+  .progress { margin: 16px 0; }
+  .progress-bar {
+    height: 4px;
+    background: #2A2A2A;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #7C5CFF, #00D4AA);
+    border-radius: 2px;
+    width: 0%;
+    transition: width 0.3s;
+  }
+  .progress-text { font-size: 12px; color: #666; margin-top: 6px; }
+
+  .example-chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .example-chip {
+    padding: 6px 12px;
+    background: #111;
+    border: 1px solid #2A2A2A;
+    border-radius: 16px;
+    font-size: 12px;
+    color: #555;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .example-chip:hover { border-color: #7C5CFF; color: #888; }
+</style>
+</head>
+<body>
+
+<h1>Diagram Forge</h1>
+<p class="subtitle">AI-powered diagram generation</p>
+
+<div class="card">
+  <div class="tabs">
+    <button class="tab active" data-tab="text">Text</button>
+    <button class="tab" data-tab="voice">Voice</button>
+    <button class="tab" data-tab="image">Image</button>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Describe your diagram</div>
+    <textarea id="prompt" placeholder="e.g. User logs in via OAuth, then calls a REST API that queries a PostgreSQL database..." maxlength="4000"></textarea>
+    <div class="char-count"><span id="charCount">0</span> / 4000</div>
+    <div class="example-chips">
+      <span class="example-chip" data-example="Architecture: client → API gateway → microservices → database">Architecture example</span>
+      <span class="example-chip" data-example="Sequence: browser logs in, gateway validates, returns JWT token">Sequence example</span>
+      <span class="example-chip" data-example="Flowchart: user submits form, validate inputs, save to database, send confirmation email">Flowchart example</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Diagram type</div>
+    <div class="pills">
+      <button class="pill selected" data-type="architecture">Architecture</button>
+      <button class="pill" data-type="sequence">Sequence</button>
+      <button class="pill" data-type="flowchart">Flowchart</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Output format</div>
+    <div class="pills">
+      <button class="pill selected" data-format="excalidraw">Excalidraw</button>
+      <button class="pill" data-format="drawio">Draw.io</button>
+      <button class="pill" data-format="svg">SVG</button>
+    </div>
+  </div>
+
+  <button class="generate" id="generateBtn">Generate Diagram</button>
+
+  <div class="output" id="output">
+    <div class="status">
+      <span class="status-badge" id="statusBadge">Pending</span>
+    </div>
+
+    <div class="progress" id="progressContainer">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-text" id="progressText">Queued...</div>
+    </div>
+
+    <div class="downloads" id="downloads" style="display:none;">
+      <button class="download-btn" id="dlExcalidraw">
+        <div class="format">Excalidraw</div>
+        <div class="desc">Open in app.excalidraw.com</div>
+      </button>
+      <button class="download-btn" id="dlDrawio">
+        <div class="format">Draw.io</div>
+        <div class="desc">Open in app.diagrams.net</div>
+      </button>
+      <button class="download-btn" id="dlSvg">
+        <div class="format">SVG</div>
+        <div class="desc">Render in browser</div>
+      </button>
+    </div>
+
+    <div class="error-msg" id="errorMsg" style="display:none;"></div>
+  </div>
+</div>
+
+<script>
+const API_BASE = '/v1';
+let apiKey = localStorage.getItem('df_api_key') || '';
+let currentJobId = null;
+let pollInterval = null;
+let selectedType = 'architecture';
+let selectedFormat = 'excalidraw';
+
+// API key modal
+if (!apiKey) {
+  apiKey = prompt('Enter your API key (X-API-Key):') || '';
+  if (apiKey) {
+    localStorage.setItem('df_api_key', apiKey);
+  }
+}
+
+function headers() {
+  return { 'X-API-Key': apiKey, 'Content-Type': 'application/json' };
+}
+
+// Tabs
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('prompt').placeholder =
+      tab.dataset.tab === 'text' ? 'Describe your diagram...' :
+      tab.dataset.tab === 'voice' ? 'Record or upload audio...' :
+      'Upload an image...';
+  });
+});
+
+// Type pills
+document.querySelectorAll('[data-type]').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('[data-type]').forEach(p => p.classList.remove('selected'));
+    pill.classList.add('selected');
+    selectedType = pill.dataset.type;
+  });
+});
+
+// Format pills
+document.querySelectorAll('[data-format]').forEach(pill => {
+  pill.addEventListener('click', () => {
+    document.querySelectorAll('[data-format]').forEach(p => p.classList.remove('selected'));
+    pill.classList.add('selected');
+    selectedFormat = pill.dataset.format;
+  });
+});
+
+// Char count
+const promptEl = document.getElementById('prompt');
+const charCountEl = document.getElementById('charCount');
+promptEl.addEventListener('input', () => {
+  charCountEl.textContent = promptEl.value.length;
+  charCountEl.parentElement.classList.toggle('warning', promptEl.value.length > 3800);
+});
+
+// Example chips
+document.querySelectorAll('.example-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    promptEl.value = chip.dataset.example;
+    charCountEl.textContent = promptEl.value.length;
+  });
+});
+
+// Generate
+document.getElementById('generateBtn').addEventListener('click', async () => {
+  const text = promptEl.value.trim();
+  if (!text) { alert('Please enter a description'); return; }
+  if (!apiKey) { alert('API key required'); return; }
+
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+
+  const output = document.getElementById('output');
+  const badge = document.getElementById('statusBadge');
+  const progressFill = document.getElementById('progressFill');
+  const progressText = document.getElementById('progressText');
+  const downloads = document.getElementById('downloads');
+  const errorMsg = document.getElementById('errorMsg');
+
+  output.classList.add('visible');
+  badge.className = 'status-badge pending';
+  badge.textContent = 'Pending';
+  progressFill.style.width = '20%';
+  progressText.textContent = 'Queued...';
+  downloads.style.display = 'none';
+  errorMsg.style.display = 'none';
+
+  try {
+    const resp = await fetch(`${API_BASE}/generate/text`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ text, diagram_type: selectedType }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      throw new Error(`${err.code}: ${err.message}`);
+    }
+
+    const data = await resp.json();
+    currentJobId = data.job_id;
+    badge.className = 'status-badge processing';
+    badge.textContent = 'Processing';
+    progressFill.style.width = '50%';
+    progressText.textContent = 'Generating diagram...';
+
+    // Poll
+    pollInterval = setInterval(async () => {
+      const statusResp = await fetch(`${API_BASE}/jobs/${currentJobId}`, { headers: headers() });
+      const statusData = await statusResp.json();
+
+      badge.textContent = statusData.status;
+      if (statusData.status === 'processing') {
+        progressFill.style.width = '70%';
+        progressText.textContent = 'Almost done...';
+      }
+
+      if (statusData.status === 'completed') {
+        clearInterval(pollInterval);
+        badge.className = 'status-badge completed';
+        badge.textContent = 'Completed';
+        progressFill.style.width = '100%';
+        progressText.textContent = 'Ready!';
+        downloads.style.display = 'flex';
+
+        // Wire download buttons
+        ['excalidraw', 'drawio', 'svg'].forEach(fmt => {
+          document.getElementById('dl' + fmt.charAt(0).toUpperCase() + fmt.slice(1))
+            .onclick = () => {
+              const a = document.createElement('a');
+              a.href = `${API_BASE}/jobs/${currentJobId}/download/${fmt}`;
+              a.download = `diagram.${fmt === 'excalidraw' ? 'excalidraw.json' : fmt}`;
+              a.click();
+            };
+        });
+      }
+
+      if (statusData.status === 'failed') {
+        clearInterval(pollInterval);
+        badge.className = 'status-badge failed';
+        badge.textContent = 'Failed';
+        errorMsg.textContent = statusData.error_message || 'Unknown error';
+        errorMsg.style.display = 'block';
+      }
+    }, 2000);
+
+  } catch (e) {
+    badge.className = 'status-badge failed';
+    badge.textContent = 'Error';
+    errorMsg.textContent = e.message;
+    errorMsg.style.display = 'block';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Generate Diagram';
+  }
+});
+</script>
+
+</body>
+</html>
