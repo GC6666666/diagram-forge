@@ -17,3 +17,10 @@ data/input/
 # OS
 .DS_Store
 Thumbs.db
+
+# Gas Town (added by gt)
+.runtime/
+.claude/
+.logs/
+state.json
+CLAUDE.md
